@@ -1,23 +1,17 @@
 -- ╔══════════════════════════════════════════════════════════╗
 -- ║          ⚡ VIOLET THUNDER UI LIBRARY ⚡                  ║
--- ║     Fluent Design • Sidebar • Purple Theme              ║
+-- ║  Fluent Design • Full Old-API Backward Compatibility    ║
 -- ╚══════════════════════════════════════════════════════════╝
 
---// SERVICES
 local UserInputService = game:GetService("UserInputService")
 local TweenService     = game:GetService("TweenService")
 local RunService       = game:GetService("RunService")
-local Players          = game:GetService("Players")
-local LocalPlayer      = Players.LocalPlayer
-local Mouse            = LocalPlayer:GetMouse()
 
---// CLEANUP
 do
-    local existing = game:GetService("CoreGui"):FindFirstChild("VioletThunderUI")
-    if existing then existing:Destroy() end
+    local e = game:GetService("CoreGui"):FindFirstChild("VioletThunderUI")
+    if e then e:Destroy() end
 end
 
---// ROOT
 local Root = Instance.new("ScreenGui")
 Root.Name           = "VioletThunderUI"
 Root.ResetOnSpawn   = false
@@ -25,1279 +19,566 @@ Root.IgnoreGuiInset = true
 Root.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 Root.Parent         = game:GetService("CoreGui")
 
---// THEME
-local Theme = {
-    -- Sidebar
-    Sidebar        = Color3.fromRGB(18, 8, 36),
-    SidebarBorder  = Color3.fromRGB(60, 20, 110),
-    -- Content area
-    Content        = Color3.fromRGB(22, 10, 44),
-    ContentAlt     = Color3.fromRGB(28, 13, 54),
-    -- Title bar
-    TitleBar       = Color3.fromRGB(14, 6, 28),
-    -- Accent
-    Accent         = Color3.fromRGB(138, 43, 226),
-    AccentLight    = Color3.fromRGB(180, 90, 255),
-    AccentDark     = Color3.fromRGB(90, 20, 180),
-    -- Text
-    TextPrimary    = Color3.fromRGB(255, 255, 255),
-    TextSecondary  = Color3.fromRGB(180, 150, 220),
-    TextMuted      = Color3.fromRGB(120, 90, 160),
-    -- Elements
-    ElementBg      = Color3.fromRGB(32, 15, 62),
-    ElementBorder  = Color3.fromRGB(75, 30, 140),
-    ElementHover   = Color3.fromRGB(50, 20, 95),
-    -- Toggle
-    ToggleOff      = Color3.fromRGB(45, 20, 80),
-    ToggleOn       = Color3.fromRGB(138, 43, 226),
-    -- Window
-    WindowBg       = Color3.fromRGB(12, 5, 24),
-    WindowBorder   = Color3.fromRGB(55, 18, 100),
+local T = {
+    Sidebar     = Color3.fromRGB(18,  8,  36),
+    SideBar2    = Color3.fromRGB(60,  20, 110),
+    Content     = Color3.fromRGB(22,  10,  44),
+    ContentAlt  = Color3.fromRGB(28,  13,  54),
+    TitleBar    = Color3.fromRGB(14,   6,  28),
+    Accent      = Color3.fromRGB(138, 43, 226),
+    AccentLight = Color3.fromRGB(180, 90, 255),
+    AccentDark  = Color3.fromRGB(90,  20, 180),
+    TextPri     = Color3.fromRGB(255,255,255),
+    TextSec     = Color3.fromRGB(180,150,220),
+    TextMut     = Color3.fromRGB(120, 90, 160),
+    ElBg        = Color3.fromRGB(32,  15,  62),
+    ElBorder    = Color3.fromRGB(75,  30, 140),
+    ElHover     = Color3.fromRGB(50,  20,  95),
+    TogOff      = Color3.fromRGB(45,  20,  80),
+    TogOn       = Color3.fromRGB(138, 43, 226),
+    WinBg       = Color3.fromRGB(12,   5,  24),
+    WinBorder   = Color3.fromRGB(55,  18, 100),
+    FolderBg    = Color3.fromRGB(20,   9,  40),
+    FolderHead  = Color3.fromRGB(35,  15,  70),
 }
 
---// HELPERS
 local bindingActive = false
-local connections   = {}
 local windowCount   = 0
 
-local function tween(obj, props, t, style, dir)
-    local info = TweenInfo.new(t or 0.15, style or Enum.EasingStyle.Quad, dir or Enum.EasingDirection.Out)
-    TweenService:Create(obj, info, props):Play()
+-- ── helpers ─────────────────────────────────────────────────────
+local function tw(obj, props, t, style, dir)
+    TweenService:Create(obj,
+        TweenInfo.new(t or 0.15, style or Enum.EasingStyle.Quad, dir or Enum.EasingDirection.Out),
+        props):Play()
 end
 
-local function corner(parent, radius)
-    local c = Instance.new("UICorner")
-    c.CornerRadius = UDim.new(0, radius or 6)
-    c.Parent = parent
-    return c
+local function mkCorner(p, r)
+    local c = Instance.new("UICorner"); c.CornerRadius = UDim.new(0, r or 6); c.Parent = p; return c
 end
 
-local function stroke(parent, color, thickness, transparency)
+local function mkStroke(p, col, thick, trans)
     local s = Instance.new("UIStroke")
-    s.Color        = color or Color3.fromRGB(75, 30, 140)
-    s.Thickness    = thickness or 1
-    s.Transparency = transparency or 0
-    s.Parent       = parent
-    return s
+    s.Color = col or T.ElBorder; s.Thickness = thick or 1; s.Transparency = trans or 0; s.Parent = p; return s
 end
 
-local function frame(parent, props)
-    local f = Instance.new("Frame")
-    f.BackgroundTransparency = 0
-    f.BorderSizePixel = 0
-    for k, v in pairs(props or {}) do f[k] = v end
-    f.Parent = parent
-    return f
+local function mkFrame(parent, props)
+    local f = Instance.new("Frame"); f.BackgroundTransparency = 0; f.BorderSizePixel = 0
+    for k,v in pairs(props or {}) do f[k] = v end; f.Parent = parent; return f
 end
 
-local function label(parent, props)
-    local l = Instance.new("TextLabel")
-    l.BackgroundTransparency = 1
-    l.BorderSizePixel = 0
-    l.Font = Enum.Font.GothamBold
-    l.TextSize = 13
-    l.TextColor3 = Theme.TextPrimary
+local function mkLabel(parent, props)
+    local l = Instance.new("TextLabel"); l.BackgroundTransparency = 1; l.BorderSizePixel = 0
+    l.Font = Enum.Font.GothamBold; l.TextSize = 12; l.TextColor3 = T.TextPri
     l.TextXAlignment = Enum.TextXAlignment.Left
-    for k, v in pairs(props or {}) do l[k] = v end
-    l.Parent = parent
-    return l
+    for k,v in pairs(props or {}) do l[k] = v end; l.Parent = parent; return l
 end
 
-local function button(parent, props)
-    local b = Instance.new("TextButton")
-    b.BackgroundTransparency = 1
-    b.BorderSizePixel = 0
-    b.AutoButtonColor = false
-    b.Font = Enum.Font.GothamBold
-    b.TextSize = 13
-    b.TextColor3 = Theme.TextPrimary
-    for k, v in pairs(props or {}) do b[k] = v end
-    b.Parent = parent
-    return b
+local function mkBtn(parent, props)
+    local b = Instance.new("TextButton"); b.BackgroundTransparency = 1; b.BorderSizePixel = 0
+    b.AutoButtonColor = false; b.Font = Enum.Font.GothamBold; b.TextSize = 12; b.TextColor3 = T.TextPri
+    for k,v in pairs(props or {}) do b[k] = v end; b.Parent = parent; return b
 end
 
-local function imageLabel(parent, props)
-    local i = Instance.new("ImageLabel")
-    i.BackgroundTransparency = 1
-    i.BorderSizePixel = 0
-    for k, v in pairs(props or {}) do i[k] = v end
-    i.Parent = parent
-    return i
+local function mkImg(parent, props)
+    local i = Instance.new("ImageLabel"); i.BackgroundTransparency = 1; i.BorderSizePixel = 0
+    for k,v in pairs(props or {}) do i[k] = v end; i.Parent = parent; return i
 end
 
-local function getMousePos()
-    local pos = UserInputService:GetMouseLocation()
-    return Vector2.new(pos.X, pos.Y - 36)
-end
-
--- Pulse border animation
-local function animateBorder(uiStroke)
-    local colors = {
-        Color3.fromRGB(180, 80, 255),
-        Color3.fromRGB(120, 40, 220),
-        Color3.fromRGB(210, 120, 255),
-        Color3.fromRGB(90, 20, 180),
-    }
-    local idx = 1
+local function animBorder(s)
+    local cols = {Color3.fromRGB(180,80,255), Color3.fromRGB(120,40,220), Color3.fromRGB(210,120,255), Color3.fromRGB(90,20,180)}
+    local i = 1
     task.spawn(function()
-        while uiStroke and uiStroke.Parent do
-            idx = (idx % #colors) + 1
-            tween(uiStroke, {Color = colors[idx], Transparency = 0}, 1.4, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut)
-            task.wait(1.4)
-            tween(uiStroke, {Color = Theme.WindowBorder, Transparency = 0.5}, 1.4, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut)
-            task.wait(1.4)
+        while s and s.Parent do
+            i = (i % #cols) + 1
+            tw(s, {Color=cols[i], Transparency=0}, 1.4, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut); task.wait(1.4)
+            tw(s, {Color=T.WinBorder, Transparency=0.5}, 1.4, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut); task.wait(1.4)
         end
     end)
 end
 
---// TOGGLE KEY
-UserInputService.InputBegan:Connect(function(input, processed)
-    if input.KeyCode == Enum.KeyCode.RightShift and not bindingActive then
+UserInputService.InputBegan:Connect(function(input, gp)
+    if input.KeyCode == Enum.KeyCode.RightShift and not bindingActive and not gp then
         Root.Enabled = not Root.Enabled
     end
 end)
 
---// LIBRARY
-local Library = {}
+-- ══════════════════════════════════════════════════════════════
+--  buildAPI  ← MODULE LEVEL (forward declared so AddFolder
+--              can call it recursively without scope issues)
+-- ══════════════════════════════════════════════════════════════
+local buildAPI
 
-function Library:AddWindow(title, options)
-    windowCount = windowCount + 1
-    options = options or {}
-    title   = tostring(title or "Violet Thunder")
+buildAPI = function(ts, baseZ)
+    baseZ = baseZ or 10
+    local api = {}
 
-    local winW = options.width  or 560
-    local winH = options.height or 360
-    local sideW = 140
-
-    -- ── Main Window Frame ──────────────────────────────────────
-    local win = frame(Root, {
-        Name             = "Window_" .. windowCount,
-        Size             = UDim2.fromOffset(winW, winH),
-        Position         = UDim2.fromOffset(80 + (windowCount-1)*30, 80 + (windowCount-1)*30),
-        BackgroundColor3 = Theme.WindowBg,
-        ZIndex           = windowCount * 10,
-        ClipsDescendants = false,
-    })
-    corner(win, 10)
-    local winBorder = stroke(win, Theme.WindowBorder, 1.5, 0.3)
-    animateBorder(winBorder)
-
-    -- Drop shadow
-    local shadow = imageLabel(Root, {
-        Name             = "Shadow",
-        Size             = UDim2.new(1, 30, 1, 30),
-        Position         = UDim2.new(0, -15, 0, -15),
-        ZIndex           = win.ZIndex - 1,
-        Image            = "rbxassetid://6014261993",
-        ImageColor3      = Color3.fromRGB(0, 0, 0),
-        ImageTransparency = 0.55,
-        ScaleType        = Enum.ScaleType.Slice,
-        SliceCenter      = Rect.new(49, 49, 450, 450),
-    })
-    shadow.Parent = win
-
-    -- ── Title Bar ──────────────────────────────────────────────
-    local titleBar = frame(win, {
-        Name             = "TitleBar",
-        Size             = UDim2.new(1, 0, 0, 36),
-        BackgroundColor3 = Theme.TitleBar,
-        ZIndex           = win.ZIndex + 1,
-    })
-    -- Round only top corners
-    local titleCorner = Instance.new("UICorner")
-    titleCorner.CornerRadius = UDim.new(0, 10)
-    titleCorner.Parent = titleBar
-
-    -- Cover bottom corners of titlebar
-    local titleFix = frame(titleBar, {
-        Size             = UDim2.new(1, 0, 0.5, 0),
-        Position         = UDim2.new(0, 0, 0.5, 0),
-        BackgroundColor3 = Theme.TitleBar,
-        ZIndex           = titleBar.ZIndex,
-    })
-
-    -- Title bar border bottom
-    local titleBorderBottom = frame(titleBar, {
-        Size             = UDim2.new(1, 0, 0, 1),
-        Position         = UDim2.new(0, 0, 1, -1),
-        BackgroundColor3 = Theme.SidebarBorder,
-        ZIndex           = titleBar.ZIndex + 1,
-    })
-
-    -- Window icon / logo dot
-    local logoDot = frame(titleBar, {
-        Size             = UDim2.fromOffset(8, 8),
-        Position         = UDim2.new(0, 14, 0.5, -4),
-        BackgroundColor3 = Theme.AccentLight,
-        ZIndex           = titleBar.ZIndex + 2,
-    })
-    corner(logoDot, 4)
-    -- Logo pulse
-    task.spawn(function()
-        while logoDot and logoDot.Parent do
-            tween(logoDot, {BackgroundColor3 = Theme.Accent}, 1, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut)
-            task.wait(1)
-            tween(logoDot, {BackgroundColor3 = Theme.AccentLight}, 1, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut)
-            task.wait(1)
-        end
-    end)
-
-    -- Title text
-    label(titleBar, {
-        Text             = string.upper(title),
-        Size             = UDim2.new(1, -120, 1, 0),
-        Position         = UDim2.new(0, 30, 0, 0),
-        TextColor3       = Theme.TextPrimary,
-        TextSize         = 13,
-        ZIndex           = titleBar.ZIndex + 2,
-    })
-
-    -- Close button
-    local closeBtn = button(titleBar, {
-        Text             = "✕",
-        Size             = UDim2.fromOffset(28, 28),
-        Position         = UDim2.new(1, -34, 0.5, -14),
-        BackgroundColor3 = Color3.fromRGB(180, 40, 80),
-        BackgroundTransparency = 1,
-        TextColor3       = Theme.TextMuted,
-        TextSize         = 14,
-        ZIndex           = titleBar.ZIndex + 3,
-    })
-    corner(closeBtn, 6)
-    closeBtn.MouseEnter:Connect(function()
-        tween(closeBtn, {BackgroundTransparency = 0.2, TextColor3 = Color3.fromRGB(255,255,255)}, 0.1)
-    end)
-    closeBtn.MouseLeave:Connect(function()
-        tween(closeBtn, {BackgroundTransparency = 1, TextColor3 = Theme.TextMuted}, 0.1)
-    end)
-    closeBtn.MouseButton1Click:Connect(function()
-        Root.Enabled = false
-    end)
-
-    -- Minimize button
-    local minBtn = button(titleBar, {
-        Text             = "─",
-        Size             = UDim2.fromOffset(28, 28),
-        Position         = UDim2.new(1, -66, 0.5, -14),
-        BackgroundTransparency = 1,
-        TextColor3       = Theme.TextMuted,
-        TextSize         = 14,
-        ZIndex           = titleBar.ZIndex + 3,
-    })
-    corner(minBtn, 6)
-    local isMinimized = false
-    local savedH = winH
-    minBtn.MouseEnter:Connect(function()
-        tween(minBtn, {BackgroundTransparency = 0.7, TextColor3 = Theme.TextSecondary}, 0.1)
-        minBtn.BackgroundColor3 = Theme.ElementBg
-    end)
-    minBtn.MouseLeave:Connect(function()
-        tween(minBtn, {BackgroundTransparency = 1, TextColor3 = Theme.TextMuted}, 0.1)
-    end)
-    minBtn.MouseButton1Click:Connect(function()
-        isMinimized = not isMinimized
-        if isMinimized then
-            savedH = win.AbsoluteSize.Y
-            tween(win, {Size = UDim2.fromOffset(win.AbsoluteSize.X, 36)}, 0.2, Enum.EasingStyle.Quad)
-        else
-            tween(win, {Size = UDim2.fromOffset(win.AbsoluteSize.X, savedH)}, 0.2, Enum.EasingStyle.Back, Enum.EasingDirection.Out)
-        end
-    end)
-
-    -- Draggable
-    do
-        local dragging, dragStart, startPos = false, nil, nil
-        titleBar.InputBegan:Connect(function(input)
-            if input.UserInputType == Enum.UserInputType.MouseButton1 then
-                dragging  = true
-                dragStart = input.Position
-                startPos  = win.Position
-            end
-        end)
-        titleBar.InputEnded:Connect(function(input)
-            if input.UserInputType == Enum.UserInputType.MouseButton1 then
-                dragging = false
-            end
-        end)
-        RunService.Heartbeat:Connect(function()
-            if dragging and dragStart then
-                local delta = UserInputService:GetMouseLocation() - Vector2.new(dragStart.X, dragStart.Y)
-                win.Position = UDim2.fromOffset(startPos.X.Offset + delta.X, startPos.Y.Offset + delta.Y)
-            end
-        end)
+    function api:AddSection(name)
+        local s = mkFrame(ts, {Size=UDim2.new(1,0,0,20), BackgroundTransparency=1, ZIndex=baseZ+1})
+        mkLabel(s, {Text=string.upper(name or ""), Size=UDim2.new(1,0,1,0), TextColor3=T.AccentLight, TextSize=9, ZIndex=baseZ+2})
+        mkFrame(s, {Size=UDim2.new(1,0,0,1), Position=UDim2.new(0,0,1,-1), BackgroundColor3=T.SideBar2, ZIndex=baseZ+2})
+        return s
     end
 
-    -- ── Sidebar ────────────────────────────────────────────────
-    local sidebar = frame(win, {
-        Name             = "Sidebar",
-        Size             = UDim2.new(0, sideW, 1, -36),
-        Position         = UDim2.new(0, 0, 0, 36),
-        BackgroundColor3 = Theme.Sidebar,
-        ZIndex           = win.ZIndex + 1,
-        ClipsDescendants = true,
-    })
-    -- Round bottom-left corner only
-    local sideCorner = Instance.new("UICorner")
-    sideCorner.CornerRadius = UDim.new(0, 10)
-    sideCorner.Parent = sidebar
-    -- Fix top corners of sidebar
-    frame(sidebar, {
-        Size             = UDim2.new(1, 0, 0, 10),
-        BackgroundColor3 = Theme.Sidebar,
-        ZIndex           = sidebar.ZIndex,
-    })
-    -- Fix right corner (top-right and bottom-right of sidebar are square)
-    frame(sidebar, {
-        Size             = UDim2.new(0, 10, 1, 0),
-        Position         = UDim2.new(1, -10, 0, 0),
-        BackgroundColor3 = Theme.Sidebar,
-        ZIndex           = sidebar.ZIndex,
-    })
-
-    -- Sidebar right border
-    frame(sidebar, {
-        Size             = UDim2.new(0, 1, 1, 0),
-        Position         = UDim2.new(1, -1, 0, 0),
-        BackgroundColor3 = Theme.SidebarBorder,
-        ZIndex           = sidebar.ZIndex + 1,
-    })
-
-    -- Sidebar nav list
-    local navList = frame(sidebar, {
-        Name             = "NavList",
-        Size             = UDim2.new(1, 0, 1, -10),
-        Position         = UDim2.new(0, 0, 0, 10),
-        BackgroundTransparency = 1,
-        ZIndex           = sidebar.ZIndex + 1,
-    })
-    local navLayout = Instance.new("UIListLayout")
-    navLayout.SortOrder      = Enum.SortOrder.LayoutOrder
-    navLayout.Padding        = UDim.new(0, 2)
-    navLayout.Parent         = navList
-
-    local navPadding = Instance.new("UIPadding")
-    navPadding.PaddingLeft   = UDim.new(0, 8)
-    navPadding.PaddingRight  = UDim.new(0, 8)
-    navPadding.PaddingTop    = UDim.new(0, 6)
-    navPadding.Parent        = navList
-
-    -- Sidebar bottom info
-    local sideBottom = frame(sidebar, {
-        Size             = UDim2.new(1, 0, 0, 30),
-        Position         = UDim2.new(0, 0, 1, -30),
-        BackgroundColor3 = Theme.Sidebar,
-        ZIndex           = sidebar.ZIndex + 2,
-    })
-    label(sideBottom, {
-        Text      = "⚡ VIOLET THUNDER",
-        Size      = UDim2.new(1, -10, 1, 0),
-        Position  = UDim2.new(0, 8, 0, 0),
-        TextColor3 = Theme.TextMuted,
-        TextSize  = 9,
-        ZIndex    = sideBottom.ZIndex + 1,
-    })
-
-    -- ── Content Area ───────────────────────────────────────────
-    local contentArea = frame(win, {
-        Name             = "ContentArea",
-        Size             = UDim2.new(1, -sideW, 1, -36),
-        Position         = UDim2.new(0, sideW, 0, 36),
-        BackgroundColor3 = Theme.Content,
-        ZIndex           = win.ZIndex + 1,
-        ClipsDescendants = true,
-    })
-    -- Round bottom-right
-    local contentCorner = Instance.new("UICorner")
-    contentCorner.CornerRadius = UDim.new(0, 10)
-    contentCorner.Parent = contentArea
-    -- Fix left + top corners of content
-    frame(contentArea, {
-        Size             = UDim2.new(0, 10, 1, 0),
-        BackgroundColor3 = Theme.Content,
-        ZIndex           = contentArea.ZIndex,
-    })
-    frame(contentArea, {
-        Size             = UDim2.new(1, 0, 0, 10),
-        BackgroundColor3 = Theme.Content,
-        ZIndex           = contentArea.ZIndex,
-    })
-
-    -- ── Window API ─────────────────────────────────────────────
-    local windowAPI  = {}
-    local activeNav  = nil
-    local tabPages   = {}
-
-    function windowAPI:AddTab(tabName, icon)
-        tabName = tostring(tabName or "Tab")
-        icon    = icon or "•"
-
-        -- Nav button in sidebar
-        local navBtn = button(navList, {
-            Name             = "NavBtn_" .. tabName,
-            Size             = UDim2.new(1, 0, 0, 32),
-            BackgroundColor3 = Theme.ElementBg,
-            BackgroundTransparency = 1,
-            TextColor3       = Theme.TextMuted,
-            TextSize         = 12,
-            Text             = "",
-            ZIndex           = navList.ZIndex + 1,
+    function api:AddLabel(text)
+        local el  = mkFrame(ts, {Size=UDim2.new(1,0,0,22), BackgroundTransparency=1, ZIndex=baseZ+1})
+        local lbl = mkLabel(el, {Text=tostring(text or ""), Size=UDim2.new(1,0,1,0), TextColor3=T.TextSec, TextSize=11, ZIndex=baseZ+2, TextWrapped=true})
+        local proxy = setmetatable({}, {
+            __index    = function(_, k)
+                if k == "Text"   then return lbl.Text end
+                if k == "Remove" then return function() el:Destroy() end end
+            end,
+            __newindex = function(_, k, v)
+                if k == "Text" then lbl.Text = tostring(v) end
+            end,
         })
-        corner(navBtn, 7)
+        return proxy
+    end
 
-        -- Nav icon
-        label(navBtn, {
-            Text      = icon,
-            Size      = UDim2.fromOffset(20, 32),
-            Position  = UDim2.new(0, 6, 0, 0),
-            TextColor3 = Theme.TextMuted,
-            TextSize  = 14,
-            TextXAlignment = Enum.TextXAlignment.Center,
-            ZIndex    = navBtn.ZIndex + 1,
-        })
+    function api:AddButton(lbl, cb)
+        lbl = tostring(lbl or "Button"); cb = type(cb)=="function" and cb or function() end
+        local el = mkFrame(ts, {Size=UDim2.new(1,0,0,30), BackgroundColor3=T.ElBg, ZIndex=baseZ+1})
+        mkCorner(el, 7); mkStroke(el, T.ElBorder, 1, 0.6)
+        mkLabel(el, {Text=string.upper(lbl), Size=UDim2.new(1,-32,1,0), Position=UDim2.new(0,10,0,0), TextColor3=T.TextPri, TextSize=11, ZIndex=baseZ+2})
+        mkLabel(el, {Text="›", Size=UDim2.fromOffset(18,30), Position=UDim2.new(1,-20,0,0), TextColor3=T.AccentLight, TextSize=14, TextXAlignment=Enum.TextXAlignment.Center, ZIndex=baseZ+2})
+        local c = mkBtn(el, {Size=UDim2.new(1,0,1,0), ZIndex=baseZ+3, Text=""})
+        c.MouseEnter:Connect(function()  tw(el,{BackgroundColor3=T.ElHover},0.1) end)
+        c.MouseLeave:Connect(function()  tw(el,{BackgroundColor3=T.ElBg},0.1) end)
+        c.MouseButton1Click:Connect(function()
+            tw(el,{BackgroundColor3=T.Accent},0.08)
+            task.delay(0.12, function() tw(el,{BackgroundColor3=T.ElBg},0.15) end)
+            pcall(cb)
+        end)
+        return setmetatable({},{__index=function(_,k) if k=="Remove" then return function() el:Destroy() end end end})
+    end
 
-        -- Nav label
-        local navLabel = label(navBtn, {
-            Text      = string.upper(tabName),
-            Size      = UDim2.new(1, -34, 1, 0),
-            Position  = UDim2.new(0, 30, 0, 0),
-            TextColor3 = Theme.TextMuted,
-            TextSize  = 11,
-            ZIndex    = navBtn.ZIndex + 1,
-        })
+    function api:AddToggle(lbl, default, cb)
+        lbl = tostring(lbl or "Toggle")
+        if type(default)=="function" then cb=default; default=false end
+        cb = type(cb)=="function" and cb or function() end
+        local st = default==true
+        local el = mkFrame(ts, {Size=UDim2.new(1,0,0,30), BackgroundColor3=T.ElBg, ZIndex=baseZ+1})
+        mkCorner(el, 7); mkStroke(el, T.ElBorder, 1, 0.6)
+        mkLabel(el, {Text=string.upper(lbl), Size=UDim2.new(1,-54,1,0), Position=UDim2.new(0,10,0,0), TextColor3=T.TextPri, TextSize=11, ZIndex=baseZ+2})
+        local track = mkFrame(el, {Size=UDim2.fromOffset(34,18), Position=UDim2.new(1,-44,0.5,-9), BackgroundColor3=st and T.TogOn or T.TogOff, ZIndex=baseZ+2})
+        mkCorner(track, 9); mkStroke(track, T.ElBorder, 1, 0.4)
+        local thumb = mkFrame(track, {Size=UDim2.fromOffset(12,12), Position=st and UDim2.fromOffset(19,3) or UDim2.fromOffset(3,3), BackgroundColor3=Color3.new(1,1,1), ZIndex=baseZ+3})
+        mkCorner(thumb, 6)
+        local function upd()
+            tw(track, {BackgroundColor3=st and T.TogOn or T.TogOff}, 0.15)
+            tw(thumb, {Position=st and UDim2.fromOffset(19,3) or UDim2.fromOffset(3,3)}, 0.15, Enum.EasingStyle.Back, Enum.EasingDirection.Out)
+        end
+        local c = mkBtn(el, {Size=UDim2.new(1,0,1,0), ZIndex=baseZ+4, Text=""})
+        c.MouseEnter:Connect(function()  tw(el,{BackgroundColor3=T.ElHover},0.1) end)
+        c.MouseLeave:Connect(function()  tw(el,{BackgroundColor3=T.ElBg},0.1) end)
+        c.MouseButton1Click:Connect(function() st = not st; upd(); pcall(cb, st) end)
+        upd()
+        local tAPI = {}
+        function tAPI:Set(v) st = v==true; upd(); pcall(cb, st) end
+        function tAPI:Get() return st end
+        return tAPI, el
+    end
 
-        -- Active indicator bar (left side)
-        local activeBar = frame(navBtn, {
-            Size             = UDim2.fromOffset(3, 16),
-            Position         = UDim2.new(0, -8, 0.5, -8),
-            BackgroundColor3 = Theme.AccentLight,
-            BackgroundTransparency = 1,
-            ZIndex           = navBtn.ZIndex + 2,
-        })
-        corner(activeBar, 2)
+    -- AddSwitch = old-API alias for AddToggle
+    function api:AddSwitch(lbl, cb)
+        return api:AddToggle(lbl, false, cb)
+    end
 
-        -- Content page
-        local page = frame(contentArea, {
-            Name             = "Page_" .. tabName,
-            Size             = UDim2.new(1, 0, 1, 0),
-            BackgroundTransparency = 1,
-            Visible          = false,
-            ZIndex           = contentArea.ZIndex + 1,
-            ClipsDescendants = true,
-        })
+    function api:AddSlider(lbl, settings, cb)
+        lbl = tostring(lbl or "Slider")
+        if type(settings)=="function" then cb=settings; settings={} end
+        cb = type(cb)=="function" and cb or function() end
+        settings = settings or {}
+        local mn=settings.min or 0; local mx=settings.max or 100
+        local df=settings.default or mn; local sx=settings.suffix or ""
+        local el = mkFrame(ts, {Size=UDim2.new(1,0,0,44), BackgroundColor3=T.ElBg, ZIndex=baseZ+1})
+        mkCorner(el, 7); mkStroke(el, T.ElBorder, 1, 0.6)
+        mkLabel(el, {Text=string.upper(lbl), Size=UDim2.new(0.65,0,0,20), Position=UDim2.new(0,10,0,3), TextColor3=T.TextPri, TextSize=11, ZIndex=baseZ+2})
+        local vLbl = mkLabel(el, {Text=tostring(df)..sx, Size=UDim2.new(0.35,-12,0,20), Position=UDim2.new(0.65,0,0,3), TextColor3=T.AccentLight, TextSize=11, TextXAlignment=Enum.TextXAlignment.Right, ZIndex=baseZ+2})
+        local track = mkFrame(el, {Size=UDim2.new(1,-20,0,4), Position=UDim2.new(0,10,0,30), BackgroundColor3=T.ElHover, ZIndex=baseZ+2}); mkCorner(track,2)
+        local fill  = mkFrame(track, {Size=UDim2.new(0,0,1,0), BackgroundColor3=T.AccentLight, ZIndex=baseZ+3}); mkCorner(fill,2)
+        local knob  = mkFrame(track, {Size=UDim2.fromOffset(10,10), Position=UDim2.new(0,-5,0.5,-5), BackgroundColor3=Color3.new(1,1,1), ZIndex=baseZ+4}); mkCorner(knob,5)
+        local cur = df
+        local function sp(pct)
+            pct = math.clamp(pct,0,1); cur = math.floor(mn+(mx-mn)*pct)
+            fill.Size = UDim2.new(pct,0,1,0); knob.Position = UDim2.new(pct,-5,0.5,-5)
+            vLbl.Text = tostring(cur)..sx; pcall(cb, cur)
+        end
+        sp((df-mn)/math.max(mx-mn,1))
+        local drg = false
+        track.InputBegan:Connect(function(i) if i.UserInputType==Enum.UserInputType.MouseButton1 then drg=true end end)
+        UserInputService.InputEnded:Connect(function(i) if i.UserInputType==Enum.UserInputType.MouseButton1 then drg=false end end)
+        RunService.Heartbeat:Connect(function() if drg then sp((UserInputService:GetMouseLocation().X-track.AbsolutePosition.X)/track.AbsoluteSize.X) end end)
+        local sAPI = {}
+        function sAPI:Set(v) sp((v-mn)/math.max(mx-mn,1)) end
+        function sAPI:Get() return cur end
+        return sAPI, el
+    end
 
-        -- Page scroller
-        local scroller = Instance.new("ScrollingFrame")
-        scroller.Name                        = "Scroller"
-        scroller.Parent                      = page
-        scroller.Size                        = UDim2.new(1, 0, 1, 0)
-        scroller.BackgroundTransparency      = 1
-        scroller.BorderSizePixel             = 0
-        scroller.ScrollBarThickness          = 3
-        scroller.ScrollBarImageColor3        = Theme.AccentLight
-        scroller.ScrollBarImageTransparency  = 0.3
-        scroller.CanvasSize                  = UDim2.new(0, 0, 0, 0)
-        scroller.ZIndex                      = page.ZIndex
+    function api:AddDropdown(lbl, cbOrItems, mayCb)
+        lbl = tostring(lbl or "Dropdown")
+        local cb, items
+        if type(cbOrItems)=="function" then cb=cbOrItems; items={}
+        elseif type(cbOrItems)=="table" then items=cbOrItems; cb=type(mayCb)=="function" and mayCb or function()end
+        else cb=function()end; items={} end
 
-        local pageLayout = Instance.new("UIListLayout")
-        pageLayout.SortOrder = Enum.SortOrder.LayoutOrder
-        pageLayout.Padding   = UDim.new(0, 6)
-        pageLayout.Parent    = scroller
+        local sel=items[1]; local open=false
+        local el = mkFrame(ts, {Size=UDim2.new(1,0,0,30), BackgroundColor3=T.ElBg, ZIndex=baseZ+1, ClipsDescendants=false})
+        mkCorner(el,7); mkStroke(el,T.ElBorder,1,0.6)
+        mkLabel(el, {Text=string.upper(lbl), Size=UDim2.new(0.55,0,1,0), Position=UDim2.new(0,10,0,0), TextColor3=T.TextPri, TextSize=11, ZIndex=baseZ+2})
+        local sLbl = mkLabel(el, {Text=sel and string.upper(tostring(sel)) or "SELECT...", Size=UDim2.new(0.4,-26,1,0), Position=UDim2.new(0.55,0,0,0), TextColor3=T.AccentLight, TextSize=10, TextXAlignment=Enum.TextXAlignment.Right, ZIndex=baseZ+2})
+        local arrow = mkLabel(el, {Text="⌄", Size=UDim2.fromOffset(18,30), Position=UDim2.new(1,-20,0,0), TextColor3=T.AccentLight, TextSize=12, TextXAlignment=Enum.TextXAlignment.Center, ZIndex=baseZ+2})
+        local dList = mkFrame(el, {Size=UDim2.new(1,0,0,0), Position=UDim2.new(0,0,1,3), BackgroundColor3=T.ContentAlt, ZIndex=baseZ+20, ClipsDescendants=true, Visible=false})
+        mkCorner(dList,7); mkStroke(dList,T.ElBorder,1,0.4)
+        local dLay = Instance.new("UIListLayout"); dLay.SortOrder=Enum.SortOrder.LayoutOrder; dLay.Parent=dList
+        local dPad = Instance.new("UIPadding"); dPad.PaddingTop=UDim.new(0,3); dPad.PaddingBottom=UDim.new(0,3); dPad.Parent=dList
 
-        local pagePad = Instance.new("UIPadding")
-        pagePad.PaddingLeft   = UDim.new(0, 12)
-        pagePad.PaddingRight  = UDim.new(0, 12)
-        pagePad.PaddingTop    = UDim.new(0, 12)
-        pagePad.PaddingBottom = UDim.new(0, 12)
-        pagePad.Parent        = scroller
+        local function rebuild()
+            for _,c in ipairs(dList:GetChildren()) do if c:IsA("TextButton") then c:Destroy() end end
+            for _,item in ipairs(items) do
+                local ib = mkBtn(dList, {Text="  "..string.upper(tostring(item)), Size=UDim2.new(1,0,0,24), BackgroundColor3=T.ContentAlt, BackgroundTransparency=0, TextColor3=item==sel and T.AccentLight or T.TextSec, TextSize=10, ZIndex=baseZ+21})
+                ib.MouseEnter:Connect(function() tw(ib,{BackgroundColor3=T.ElHover,TextColor3=T.TextPri},0.08) end)
+                ib.MouseLeave:Connect(function() tw(ib,{BackgroundColor3=T.ContentAlt,TextColor3=item==sel and T.AccentLight or T.TextSec},0.08) end)
+                ib.MouseButton1Click:Connect(function()
+                    sel=item; sLbl.Text=string.upper(tostring(item)); open=false
+                    tw(dList,{Size=UDim2.new(1,0,0,0)},0.12); task.delay(0.12,function() dList.Visible=false end)
+                    tw(arrow,{Rotation=0},0.12); rebuild(); pcall(cb,item)
+                end)
+            end
+        end
+        rebuild()
 
-        pageLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
-            scroller.CanvasSize = UDim2.new(0, 0, 0, pageLayout.AbsoluteContentSize.Y + 24)
+        local hBtn = mkBtn(el, {Size=UDim2.new(1,0,1,0), ZIndex=baseZ+3, Text=""})
+        hBtn.MouseEnter:Connect(function() tw(el,{BackgroundColor3=T.ElHover},0.1) end)
+        hBtn.MouseLeave:Connect(function() tw(el,{BackgroundColor3=T.ElBg},0.1) end)
+        hBtn.MouseButton1Click:Connect(function()
+            open = not open
+            if open then
+                dList.Visible=true; local h=math.min(#items*24+6,140)
+                tw(dList,{Size=UDim2.new(1,0,0,h)},0.12); tw(arrow,{Rotation=180},0.12)
+            else
+                tw(dList,{Size=UDim2.new(1,0,0,0)},0.12); task.delay(0.12,function() dList.Visible=false end)
+                tw(arrow,{Rotation=0},0.12)
+            end
         end)
 
-        table.insert(tabPages, {btn = navBtn, page = page, bar = activeBar, lbl = navLabel})
+        local ddAPI = {}
+        function ddAPI:Add(name)     name=tostring(name); for _,v in ipairs(items) do if v==name then return end end; table.insert(items,name); rebuild() end
+        function ddAPI:Remove(name)  name=tostring(name); for i,v in ipairs(items) do if v==name then table.remove(items,i); break end end; if sel==name then sel=items[1]; sLbl.Text=sel and string.upper(tostring(sel)) or "SELECT..." end; rebuild() end
+        function ddAPI:Set(v)        sel=v; sLbl.Text=string.upper(tostring(v)); rebuild() end
+        function ddAPI:Get()         return sel end
+        function ddAPI:SetItems(t)   items=t; rebuild() end
+        function ddAPI:ClearSelection() sel=nil; sLbl.Text="SELECT..." end
+        function ddAPI:ClearOptions()   items={}; sel=nil; sLbl.Text="SELECT..."; rebuild() end
+        return ddAPI, el
+    end
+
+    function api:AddTextBox(lbl, cb)
+        lbl = tostring(lbl or "Input"); cb = type(cb)=="function" and cb or function() end
+        local el = mkFrame(ts, {Size=UDim2.new(1,0,0,30), BackgroundColor3=T.ElBg, ZIndex=baseZ+1})
+        mkCorner(el,7); mkStroke(el,T.ElBorder,1,0.6)
+        mkLabel(el, {Text=string.upper(lbl), Size=UDim2.new(0.45,0,1,0), Position=UDim2.new(0,10,0,0), TextColor3=T.TextPri, TextSize=11, ZIndex=baseZ+2})
+        local tb = Instance.new("TextBox"); tb.Parent=el
+        tb.Size=UDim2.new(0.5,-8,0,20); tb.Position=UDim2.new(0.48,0,0.5,-10)
+        tb.BackgroundColor3=T.ContentAlt; tb.BorderSizePixel=0
+        tb.Font=Enum.Font.GothamBold; tb.TextSize=10; tb.TextColor3=T.TextPri
+        tb.PlaceholderColor3=T.TextMut; tb.PlaceholderText="Enter..."; tb.Text=""
+        tb.ClearTextOnFocus=false; tb.ZIndex=baseZ+3; mkCorner(tb,5)
+        local p=Instance.new("UIPadding"); p.PaddingLeft=UDim.new(0,5); p.PaddingRight=UDim.new(0,5); p.Parent=tb
+        tb.Focused:Connect(function() tw(tb,{BackgroundColor3=T.ElHover},0.1) end)
+        tb.FocusLost:Connect(function(enter) tw(tb,{BackgroundColor3=T.ContentAlt},0.1); if enter and #tb.Text>0 then pcall(cb,tb.Text) end end)
+        return tb, el
+    end
+
+    function api:AddInput(lbl, placeholder, cb)
+        if type(placeholder)=="function" then cb=placeholder end
+        return api:AddTextBox(lbl, cb)
+    end
+
+    function api:AddKeybind(lbl, default, cb)
+        lbl = tostring(lbl or "Keybind")
+        if type(default)=="function" then cb=default; default=Enum.KeyCode.Unknown end
+        cb = type(cb)=="function" and cb or function() end
+        local cur = (type(default)=="EnumItem") and default or Enum.KeyCode.Unknown
+        local el = mkFrame(ts, {Size=UDim2.new(1,0,0,30), BackgroundColor3=T.ElBg, ZIndex=baseZ+1})
+        mkCorner(el,7); mkStroke(el,T.ElBorder,1,0.6)
+        mkLabel(el, {Text=string.upper(lbl), Size=UDim2.new(0.6,0,1,0), Position=UDim2.new(0,10,0,0), TextColor3=T.TextPri, TextSize=11, ZIndex=baseZ+2})
+        local kBtn = mkBtn(el, {Text=cur~=Enum.KeyCode.Unknown and cur.Name or "NONE", Size=UDim2.new(0,62,0,20), Position=UDim2.new(1,-72,0.5,-10), BackgroundColor3=T.ContentAlt, BackgroundTransparency=0, TextColor3=T.AccentLight, TextSize=9, ZIndex=baseZ+3})
+        mkCorner(kBtn,5); mkStroke(kBtn,T.ElBorder,1,0.4)
+        local lstn = false
+        kBtn.MouseButton1Click:Connect(function()
+            if lstn then return end; lstn=true; kBtn.Text="..."; bindingActive=true
+            tw(kBtn,{BackgroundColor3=T.ElHover},0.1)
+            local conn; conn=UserInputService.InputBegan:Connect(function(i)
+                if i.UserInputType==Enum.UserInputType.Keyboard then
+                    cur=i.KeyCode; kBtn.Text=i.KeyCode.Name; lstn=false; bindingActive=false
+                    tw(kBtn,{BackgroundColor3=T.ContentAlt},0.1); conn:Disconnect()
+                end
+            end)
+        end)
+        UserInputService.InputBegan:Connect(function(i,gp)
+            if not gp and cur and i.KeyCode==cur and not lstn then pcall(cb,cur) end
+        end)
+        local kAPI = {}; function kAPI:Set(k) cur=k; kBtn.Text=k.Name end
+        return kAPI, el
+    end
+
+    function api:AddSeparator()
+        local s = mkFrame(ts, {Size=UDim2.new(1,0,0,6), BackgroundTransparency=1, ZIndex=baseZ+1})
+        mkFrame(s, {Size=UDim2.new(1,0,0,1), Position=UDim2.new(0,0,0.5,0), BackgroundColor3=T.SideBar2, ZIndex=baseZ+2})
+        return s
+    end
+
+    function api:AddColorPicker(lbl, default, cb)
+        lbl = tostring(lbl or "Color")
+        if type(default)=="function" then cb=default; default=T.Accent end
+        cb = type(cb)=="function" and cb or function() end
+        local col = default or T.Accent
+        local el = mkFrame(ts, {Size=UDim2.new(1,0,0,30), BackgroundColor3=T.ElBg, ZIndex=baseZ+1})
+        mkCorner(el,7); mkStroke(el,T.ElBorder,1,0.6)
+        mkLabel(el, {Text=string.upper(lbl), Size=UDim2.new(0.65,0,1,0), Position=UDim2.new(0,10,0,0), TextColor3=T.TextPri, TextSize=11, ZIndex=baseZ+2})
+        local prev = mkFrame(el, {Size=UDim2.fromOffset(20,20), Position=UDim2.new(1,-30,0.5,-10), BackgroundColor3=col, ZIndex=baseZ+2})
+        mkCorner(prev,5); mkStroke(prev,T.ElBorder,1,0.3)
+        local cAPI = {}
+        function cAPI:Set(c) col=c; prev.BackgroundColor3=c; pcall(cb,c) end
+        function cAPI:Get() return col end
+        return cAPI, el
+    end
+
+    -- ── AddFolder ── fully recursive via module-level buildAPI ──
+    function api:AddFolder(folderName)
+        folderName = tostring(folderName or "Folder")
+
+        local container = mkFrame(ts, {
+            Size=UDim2.new(1,0,0,26), BackgroundColor3=T.FolderBg,
+            ZIndex=baseZ+1, ClipsDescendants=true
+        })
+        mkCorner(container,7); mkStroke(container,T.AccentDark,1,0.5)
+
+        local hdr = mkFrame(container, {Size=UDim2.new(1,0,0,26), BackgroundColor3=T.FolderHead, ZIndex=baseZ+2})
+        mkCorner(hdr,7)
+        mkFrame(hdr, {Size=UDim2.new(1,0,0.5,0), Position=UDim2.new(0,0,0.5,0), BackgroundColor3=T.FolderHead, ZIndex=baseZ+2})
+        mkLabel(hdr, {Text="  "..string.upper(folderName), Size=UDim2.new(1,-24,1,0), TextColor3=T.AccentLight, TextSize=11, ZIndex=baseZ+3})
+        local arrLbl = mkLabel(hdr, {Text="▶", Size=UDim2.fromOffset(20,26), Position=UDim2.new(1,-22,0,0), TextColor3=T.TextMut, TextSize=9, TextXAlignment=Enum.TextXAlignment.Center, ZIndex=baseZ+3})
+
+        local inner = Instance.new("ScrollingFrame"); inner.Parent=container
+        inner.Size=UDim2.new(1,0,1,-26); inner.Position=UDim2.new(0,0,0,26)
+        inner.BackgroundTransparency=1; inner.BorderSizePixel=0
+        inner.ScrollBarThickness=2; inner.ScrollBarImageColor3=T.AccentLight
+        inner.ScrollBarImageTransparency=0.5; inner.CanvasSize=UDim2.new(0,0,0,0)
+        inner.ZIndex=baseZ+3; inner.ClipsDescendants=true
+
+        local iLay=Instance.new("UIListLayout"); iLay.SortOrder=Enum.SortOrder.LayoutOrder; iLay.Padding=UDim.new(0,4); iLay.Parent=inner
+        local iPad=Instance.new("UIPadding"); iPad.PaddingLeft=UDim.new(0,6); iPad.PaddingRight=UDim.new(0,6); iPad.PaddingTop=UDim.new(0,5); iPad.PaddingBottom=UDim.new(0,5); iPad.Parent=inner
+
+        local isOpen = false
+        local function updateSize()
+            local ch = iLay.AbsoluteContentSize.Y + 16
+            inner.CanvasSize = UDim2.new(0,0,0,ch)
+            if isOpen then
+                local tot = math.min(ch+26, 300)
+                tw(container, {Size=UDim2.new(1,0,0,tot)}, 0.2)
+                inner.Size = UDim2.new(1,0,0,tot-26)
+            end
+        end
+        iLay:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function() if isOpen then updateSize() end end)
+
+        local hBtn = mkBtn(hdr, {Size=UDim2.new(1,0,1,0), ZIndex=baseZ+4, Text=""})
+        hBtn.MouseEnter:Connect(function() tw(hdr,{BackgroundColor3=T.ElHover},0.1) end)
+        hBtn.MouseLeave:Connect(function() tw(hdr,{BackgroundColor3=T.FolderHead},0.1) end)
+        hBtn.MouseButton1Click:Connect(function()
+            isOpen = not isOpen
+            if isOpen then tw(arrLbl,{Rotation=90},0.15); updateSize()
+            else tw(arrLbl,{Rotation=0},0.15); tw(container,{Size=UDim2.new(1,0,0,26)},0.2) end
+        end)
+
+        -- recurse using module-level buildAPI
+        local folderAPI = buildAPI(inner, baseZ+5)
+        return folderAPI, container
+    end
+
+    return api
+end
+
+-- ══════════════════════════════════════════════════════════════
+--  Library
+-- ══════════════════════════════════════════════════════════════
+local Library = {}
+
+function Library:AddWindow(title, opts)
+    windowCount = windowCount + 1
+    opts  = opts  or {}
+    title = tostring(title or "Violet Thunder")
+    local winW  = opts.width  or 580
+    local winH  = opts.height or 380
+    local sideW = 148
+
+    local win = mkFrame(Root, {
+        Name=("Win"..windowCount), Size=UDim2.fromOffset(winW,winH),
+        Position=UDim2.fromOffset(80+(windowCount-1)*28, 80+(windowCount-1)*28),
+        BackgroundColor3=T.WinBg, ZIndex=windowCount*10, ClipsDescendants=false,
+    })
+    mkCorner(win,10); animBorder(mkStroke(win,T.WinBorder,1.5,0.3))
+
+    mkImg(win, {Size=UDim2.new(1,40,1,40), Position=UDim2.new(0,-20,0,-20), ZIndex=win.ZIndex-1,
+        Image="rbxassetid://6014261993", ImageColor3=Color3.new(0,0,0), ImageTransparency=0.55,
+        ScaleType=Enum.ScaleType.Slice, SliceCenter=Rect.new(49,49,450,450)})
+
+    local bar = mkFrame(win, {Size=UDim2.new(1,0,0,36), BackgroundColor3=T.TitleBar, ZIndex=win.ZIndex+1})
+    mkCorner(bar,10)
+    mkFrame(bar, {Size=UDim2.new(1,0,0.5,0), Position=UDim2.new(0,0,0.5,0), BackgroundColor3=T.TitleBar, ZIndex=bar.ZIndex})
+    mkFrame(bar, {Size=UDim2.new(1,0,0,1),   Position=UDim2.new(0,0,1,-1),  BackgroundColor3=T.SideBar2, ZIndex=bar.ZIndex+1})
+
+    local dot = mkFrame(bar, {Size=UDim2.fromOffset(8,8), Position=UDim2.new(0,14,0.5,-4), BackgroundColor3=T.AccentLight, ZIndex=bar.ZIndex+2})
+    mkCorner(dot,4)
+    task.spawn(function()
+        while dot and dot.Parent do
+            tw(dot,{BackgroundColor3=T.Accent},1,Enum.EasingStyle.Sine,Enum.EasingDirection.InOut); task.wait(1)
+            tw(dot,{BackgroundColor3=T.AccentLight},1,Enum.EasingStyle.Sine,Enum.EasingDirection.InOut); task.wait(1)
+        end
+    end)
+
+    mkLabel(bar, {Text=string.upper(title), Size=UDim2.new(1,-110,1,0), Position=UDim2.new(0,30,0,0), TextColor3=T.TextPri, TextSize=12, ZIndex=bar.ZIndex+2})
+
+    local closeBtn = mkBtn(bar, {Text="✕", Size=UDim2.fromOffset(28,28), Position=UDim2.new(1,-34,0.5,-14),
+        BackgroundColor3=Color3.fromRGB(180,40,80), BackgroundTransparency=1, TextColor3=T.TextMut, TextSize=13, ZIndex=bar.ZIndex+3})
+    mkCorner(closeBtn,6)
+    closeBtn.MouseEnter:Connect(function() tw(closeBtn,{BackgroundTransparency=0.2,TextColor3=T.TextPri},0.1) end)
+    closeBtn.MouseLeave:Connect(function() tw(closeBtn,{BackgroundTransparency=1,TextColor3=T.TextMut},0.1) end)
+    closeBtn.MouseButton1Click:Connect(function() Root.Enabled=false end)
+
+    local minBtn = mkBtn(bar, {Text="─", Size=UDim2.fromOffset(28,28), Position=UDim2.new(1,-66,0.5,-14),
+        BackgroundTransparency=1, TextColor3=T.TextMut, TextSize=13, ZIndex=bar.ZIndex+3})
+    mkCorner(minBtn,6)
+    local minimized, savedH = false, winH
+    minBtn.MouseEnter:Connect(function() minBtn.BackgroundColor3=T.ElBg; tw(minBtn,{BackgroundTransparency=0.7,TextColor3=T.TextSec},0.1) end)
+    minBtn.MouseLeave:Connect(function() tw(minBtn,{BackgroundTransparency=1,TextColor3=T.TextMut},0.1) end)
+    minBtn.MouseButton1Click:Connect(function()
+        minimized = not minimized
+        if minimized then savedH=win.AbsoluteSize.Y; tw(win,{Size=UDim2.fromOffset(win.AbsoluteSize.X,36)},0.2)
+        else tw(win,{Size=UDim2.fromOffset(win.AbsoluteSize.X,savedH)},0.2,Enum.EasingStyle.Back,Enum.EasingDirection.Out) end
+    end)
+
+    local drag, ds, sp = false, nil, nil
+    bar.InputBegan:Connect(function(i)  if i.UserInputType==Enum.UserInputType.MouseButton1 then drag=true; ds=i.Position; sp=win.Position end end)
+    bar.InputEnded:Connect(function(i)  if i.UserInputType==Enum.UserInputType.MouseButton1 then drag=false end end)
+    RunService.Heartbeat:Connect(function()
+        if drag and ds then
+            local d = UserInputService:GetMouseLocation()-Vector2.new(ds.X,ds.Y)
+            win.Position = UDim2.fromOffset(sp.X.Offset+d.X, sp.Y.Offset+d.Y)
+        end
+    end)
+
+    local sb = mkFrame(win, {Size=UDim2.new(0,sideW,1,-36), Position=UDim2.new(0,0,0,36), BackgroundColor3=T.Sidebar, ZIndex=win.ZIndex+1, ClipsDescendants=true})
+    mkCorner(sb,10)
+    mkFrame(sb, {Size=UDim2.new(1,0,0,10),  BackgroundColor3=T.Sidebar, ZIndex=sb.ZIndex})
+    mkFrame(sb, {Size=UDim2.new(0,10,1,0),  Position=UDim2.new(1,-10,0,0), BackgroundColor3=T.Sidebar, ZIndex=sb.ZIndex})
+    mkFrame(sb, {Size=UDim2.new(0,1,1,0),   Position=UDim2.new(1,-1,0,0),  BackgroundColor3=T.SideBar2, ZIndex=sb.ZIndex+1})
+
+    local navList = mkFrame(sb, {Size=UDim2.new(1,0,1,-30), Position=UDim2.new(0,0,0,10), BackgroundTransparency=1, ZIndex=sb.ZIndex+1})
+    local navLay  = Instance.new("UIListLayout"); navLay.SortOrder=Enum.SortOrder.LayoutOrder; navLay.Padding=UDim.new(0,2); navLay.Parent=navList
+    local navPad  = Instance.new("UIPadding");  navPad.PaddingLeft=UDim.new(0,7); navPad.PaddingRight=UDim.new(0,7); navPad.PaddingTop=UDim.new(0,5); navPad.Parent=navList
+
+    local sbBot = mkFrame(sb, {Size=UDim2.new(1,0,0,22), Position=UDim2.new(0,0,1,-22), BackgroundColor3=T.Sidebar, ZIndex=sb.ZIndex+2})
+    mkLabel(sbBot, {Text="⚡ VIOLET THUNDER", Size=UDim2.new(1,-8,1,0), Position=UDim2.new(0,8,0,0), TextColor3=T.TextMut, TextSize=8, ZIndex=sbBot.ZIndex+1})
+
+    local ca = mkFrame(win, {Size=UDim2.new(1,-sideW,1,-36), Position=UDim2.new(0,sideW,0,36), BackgroundColor3=T.Content, ZIndex=win.ZIndex+1, ClipsDescendants=true})
+    mkCorner(ca,10)
+    mkFrame(ca, {Size=UDim2.new(0,10,1,0), BackgroundColor3=T.Content, ZIndex=ca.ZIndex})
+    mkFrame(ca, {Size=UDim2.new(1,0,0,10), BackgroundColor3=T.Content, ZIndex=ca.ZIndex})
+
+    local windowAPI = {}
+    local activeNav = nil
+    local tabPages  = {}
+
+    function windowAPI:AddTab(tabName, icon)
+        tabName = tostring(tabName or "Tab"); icon = icon or "•"
+
+        local navBtn = mkBtn(navList, {Size=UDim2.new(1,0,0,30), BackgroundColor3=T.ElBg, BackgroundTransparency=1, Text="", ZIndex=navList.ZIndex+1})
+        mkCorner(navBtn,6)
+        mkLabel(navBtn, {Text=icon, Size=UDim2.fromOffset(20,30), Position=UDim2.new(0,5,0,0), TextColor3=T.TextMut, TextSize=13, TextXAlignment=Enum.TextXAlignment.Center, ZIndex=navBtn.ZIndex+1})
+        local navLbl = mkLabel(navBtn, {Text=string.upper(tabName), Size=UDim2.new(1,-32,1,0), Position=UDim2.new(0,28,0,0), TextColor3=T.TextMut, TextSize=10, ZIndex=navBtn.ZIndex+1})
+        local actBar = mkFrame(navBtn, {Size=UDim2.fromOffset(3,14), Position=UDim2.new(0,-7,0.5,-7), BackgroundColor3=T.AccentLight, BackgroundTransparency=1, ZIndex=navBtn.ZIndex+2})
+        mkCorner(actBar,2)
+
+        local page = mkFrame(ca, {Size=UDim2.new(1,0,1,0), BackgroundTransparency=1, Visible=false, ZIndex=ca.ZIndex+1, ClipsDescendants=true})
+
+        local scroller = Instance.new("ScrollingFrame")
+        scroller.Parent=page; scroller.Size=UDim2.new(1,0,1,0); scroller.BackgroundTransparency=1
+        scroller.BorderSizePixel=0; scroller.ScrollBarThickness=3
+        scroller.ScrollBarImageColor3=T.AccentLight; scroller.ScrollBarImageTransparency=0.3
+        scroller.CanvasSize=UDim2.new(0,0,0,0); scroller.ZIndex=page.ZIndex
+
+        local pgLay = Instance.new("UIListLayout"); pgLay.SortOrder=Enum.SortOrder.LayoutOrder; pgLay.Padding=UDim.new(0,5); pgLay.Parent=scroller
+        local pgPad = Instance.new("UIPadding"); pgPad.PaddingLeft=UDim.new(0,10); pgPad.PaddingRight=UDim.new(0,10); pgPad.PaddingTop=UDim.new(0,10); pgPad.PaddingBottom=UDim.new(0,10); pgPad.Parent=scroller
+        pgLay:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+            scroller.CanvasSize = UDim2.new(0,0,0, pgLay.AbsoluteContentSize.Y+20)
+        end)
+
+        table.insert(tabPages, {btn=navBtn, page=page, bar=actBar, lbl=navLbl})
 
         local function selectThis()
-            -- Deselect all
-            for _, t in ipairs(tabPages) do
-                t.page.Visible = false
-                tween(t.btn, {BackgroundTransparency = 1}, 0.12)
-                tween(t.lbl, {TextColor3 = Theme.TextMuted}, 0.12)
-                tween(t.bar, {BackgroundTransparency = 1}, 0.12)
+            for _,t in ipairs(tabPages) do
+                t.page.Visible=false
+                tw(t.btn,{BackgroundTransparency=1},0.12)
+                tw(t.lbl,{TextColor3=T.TextMut},0.12)
+                tw(t.bar,{BackgroundTransparency=1},0.12)
             end
-            -- Select this
-            page.Visible = true
-            tween(navBtn, {BackgroundTransparency = 0.5}, 0.12)
-            navBtn.BackgroundColor3 = Theme.ElementHover
-            tween(navLabel, {TextColor3 = Theme.AccentLight}, 0.12)
-            tween(activeBar, {BackgroundTransparency = 0}, 0.12)
-            activeNav = navBtn
+            page.Visible=true
+            navBtn.BackgroundColor3=T.ElHover
+            tw(navBtn,{BackgroundTransparency=0.5},0.12)
+            tw(navLbl,{TextColor3=T.AccentLight},0.12)
+            tw(actBar,{BackgroundTransparency=0},0.12)
+            activeNav=navBtn
         end
 
         navBtn.MouseButton1Click:Connect(selectThis)
-        navBtn.MouseEnter:Connect(function()
-            if activeNav ~= navBtn then
-                tween(navBtn, {BackgroundTransparency = 0.8}, 0.1)
-                navBtn.BackgroundColor3 = Theme.ElementHover
-            end
-        end)
-        navBtn.MouseLeave:Connect(function()
-            if activeNav ~= navBtn then
-                tween(navBtn, {BackgroundTransparency = 1}, 0.1)
-            end
-        end)
-
-        -- Auto-select first tab
-        if #tabPages == 1 then
-            selectThis()
-        end
-
-        -- ── Tab API ──────────────────────────────────────────
-        local tabAPI = {}
-
-        -- Section header helper
-        function tabAPI:AddSection(sectionName)
-            local sec = frame(scroller, {
-                Size             = UDim2.new(1, 0, 0, 22),
-                BackgroundTransparency = 1,
-                ZIndex           = scroller.ZIndex + 1,
-            })
-            label(sec, {
-                Text      = string.upper(sectionName or "Section"),
-                Size      = UDim2.new(1, 0, 1, 0),
-                TextColor3 = Theme.AccentLight,
-                TextSize  = 10,
-                ZIndex    = sec.ZIndex + 1,
-            })
-            -- Divider line
-            frame(sec, {
-                Size             = UDim2.new(1, 0, 0, 1),
-                Position         = UDim2.new(0, 0, 1, -1),
-                BackgroundColor3 = Theme.SidebarBorder,
-                ZIndex           = sec.ZIndex + 1,
-            })
-            return sec
-        end
-
-        -- Label
-        function tabAPI:AddLabel(text)
-            local lbl = frame(scroller, {
-                Size             = UDim2.new(1, 0, 0, 28),
-                BackgroundColor3 = Theme.ElementBg,
-                ZIndex           = scroller.ZIndex + 1,
-            })
-            corner(lbl, 6)
-            label(lbl, {
-                Text      = tostring(text or "Label"),
-                Size      = UDim2.new(1, -16, 1, 0),
-                Position  = UDim2.new(0, 12, 0, 0),
-                TextColor3 = Theme.TextSecondary,
-                TextSize  = 12,
-                ZIndex    = lbl.ZIndex + 1,
-            })
-            return lbl
-        end
-
-        -- Button
-        function tabAPI:AddButton(btnLabel, callback)
-            btnLabel = tostring(btnLabel or "Button")
-            callback = type(callback) == "function" and callback or function() end
-
-            local el = frame(scroller, {
-                Size             = UDim2.new(1, 0, 0, 32),
-                BackgroundColor3 = Theme.ElementBg,
-                ZIndex           = scroller.ZIndex + 1,
-            })
-            corner(el, 7)
-            stroke(el, Theme.ElementBorder, 1, 0.6)
-
-            local btnText = label(el, {
-                Text      = string.upper(btnLabel),
-                Size      = UDim2.new(1, -40, 1, 0),
-                Position  = UDim2.new(0, 12, 0, 0),
-                TextColor3 = Theme.TextPrimary,
-                TextSize  = 12,
-                ZIndex    = el.ZIndex + 1,
-            })
-
-            -- Arrow indicator
-            label(el, {
-                Text      = "›",
-                Size      = UDim2.fromOffset(20, 32),
-                Position  = UDim2.new(1, -24, 0, 0),
-                TextColor3 = Theme.AccentLight,
-                TextSize  = 16,
-                TextXAlignment = Enum.TextXAlignment.Center,
-                ZIndex    = el.ZIndex + 1,
-            })
-
-            local clickBtn = button(el, {
-                Size  = UDim2.new(1, 0, 1, 0),
-                ZIndex = el.ZIndex + 2,
-                Text  = "",
-            })
-
-            clickBtn.MouseEnter:Connect(function()
-                tween(el, {BackgroundColor3 = Theme.ElementHover}, 0.1)
-            end)
-            clickBtn.MouseLeave:Connect(function()
-                tween(el, {BackgroundColor3 = Theme.ElementBg}, 0.1)
-            end)
-            clickBtn.MouseButton1Click:Connect(function()
-                tween(el, {BackgroundColor3 = Theme.Accent}, 0.08)
-                task.delay(0.12, function()
-                    tween(el, {BackgroundColor3 = Theme.ElementBg}, 0.15)
-                end)
-                pcall(callback)
-            end)
-
-            return el
-        end
-
-        -- Toggle / Switch
-        function tabAPI:AddToggle(toggleLabel, default, callback)
-            toggleLabel = tostring(toggleLabel or "Toggle")
-            callback    = type(callback) == "function" and callback or function() end
-            local state = default == true
-
-            local el = frame(scroller, {
-                Size             = UDim2.new(1, 0, 0, 32),
-                BackgroundColor3 = Theme.ElementBg,
-                ZIndex           = scroller.ZIndex + 1,
-            })
-            corner(el, 7)
-            stroke(el, Theme.ElementBorder, 1, 0.6)
-
-            label(el, {
-                Text      = string.upper(toggleLabel),
-                Size      = UDim2.new(1, -60, 1, 0),
-                Position  = UDim2.new(0, 12, 0, 0),
-                TextColor3 = Theme.TextPrimary,
-                TextSize  = 12,
-                ZIndex    = el.ZIndex + 1,
-            })
-
-            -- Toggle track
-            local track = frame(el, {
-                Size             = UDim2.fromOffset(36, 20),
-                Position         = UDim2.new(1, -46, 0.5, -10),
-                BackgroundColor3 = state and Theme.ToggleOn or Theme.ToggleOff,
-                ZIndex           = el.ZIndex + 2,
-            })
-            corner(track, 10)
-            stroke(track, Theme.ElementBorder, 1, 0.3)
-
-            -- Toggle thumb
-            local thumb = frame(track, {
-                Size             = UDim2.fromOffset(14, 14),
-                Position         = state and UDim2.fromOffset(19, 3) or UDim2.fromOffset(3, 3),
-                BackgroundColor3 = Color3.fromRGB(255, 255, 255),
-                ZIndex           = track.ZIndex + 1,
-            })
-            corner(thumb, 7)
-
-            local function updateVisual()
-                tween(track, {BackgroundColor3 = state and Theme.ToggleOn or Theme.ToggleOff}, 0.15)
-                tween(thumb, {Position = state and UDim2.fromOffset(19, 3) or UDim2.fromOffset(3, 3)}, 0.15, Enum.EasingStyle.Back, Enum.EasingDirection.Out)
-            end
-
-            local clickBtn = button(el, {
-                Size  = UDim2.new(1, 0, 1, 0),
-                ZIndex = el.ZIndex + 3,
-                Text  = "",
-            })
-            clickBtn.MouseEnter:Connect(function()
-                tween(el, {BackgroundColor3 = Theme.ElementHover}, 0.1)
-            end)
-            clickBtn.MouseLeave:Connect(function()
-                tween(el, {BackgroundColor3 = Theme.ElementBg}, 0.1)
-            end)
-            clickBtn.MouseButton1Click:Connect(function()
-                state = not state
-                updateVisual()
-                pcall(callback, state)
-            end)
-
-            updateVisual()
-
-            local toggleAPI = {}
-            function toggleAPI:Set(val)
-                state = val == true
-                updateVisual()
-                pcall(callback, state)
-            end
-            function toggleAPI:Get() return state end
-
-            return toggleAPI, el
-        end
-
-        -- Slider
-        function tabAPI:AddSlider(sliderLabel, settings, callback)
-            sliderLabel = tostring(sliderLabel or "Slider")
-            callback    = type(callback) == "function" and callback or function() end
-            settings    = settings or {}
-            local min   = settings.min or 0
-            local max   = settings.max or 100
-            local default = settings.default or min
-            local suffix  = settings.suffix or ""
-
-            local el = frame(scroller, {
-                Size             = UDim2.new(1, 0, 0, 46),
-                BackgroundColor3 = Theme.ElementBg,
-                ZIndex           = scroller.ZIndex + 1,
-            })
-            corner(el, 7)
-            stroke(el, Theme.ElementBorder, 1, 0.6)
-
-            label(el, {
-                Text      = string.upper(sliderLabel),
-                Size      = UDim2.new(0.7, 0, 0, 20),
-                Position  = UDim2.new(0, 12, 0, 4),
-                TextColor3 = Theme.TextPrimary,
-                TextSize  = 12,
-                ZIndex    = el.ZIndex + 1,
-            })
-
-            local valLabel = label(el, {
-                Text      = tostring(default) .. suffix,
-                Size      = UDim2.new(0.3, -12, 0, 20),
-                Position  = UDim2.new(0.7, 0, 0, 4),
-                TextColor3 = Theme.AccentLight,
-                TextSize  = 12,
-                TextXAlignment = Enum.TextXAlignment.Right,
-                ZIndex    = el.ZIndex + 1,
-            })
-
-            -- Track bg
-            local trackBg = frame(el, {
-                Size             = UDim2.new(1, -24, 0, 4),
-                Position         = UDim2.new(0, 12, 0, 32),
-                BackgroundColor3 = Theme.ElementHover,
-                ZIndex           = el.ZIndex + 1,
-            })
-            corner(trackBg, 2)
-
-            -- Fill
-            local fill = frame(trackBg, {
-                Size             = UDim2.new(0, 0, 1, 0),
-                BackgroundColor3 = Theme.AccentLight,
-                ZIndex           = trackBg.ZIndex + 1,
-            })
-            corner(fill, 2)
-
-            -- Knob
-            local knob = frame(trackBg, {
-                Size             = UDim2.fromOffset(12, 12),
-                Position         = UDim2.new(0, -6, 0.5, -6),
-                BackgroundColor3 = Color3.fromRGB(255, 255, 255),
-                ZIndex           = trackBg.ZIndex + 2,
-            })
-            corner(knob, 6)
-
-            local currentVal = default
-            local function setPct(pct)
-                pct         = math.clamp(pct, 0, 1)
-                currentVal  = math.floor(min + (max - min) * pct)
-                fill.Size   = UDim2.new(pct, 0, 1, 0)
-                knob.Position = UDim2.new(pct, -6, 0.5, -6)
-                valLabel.Text = tostring(currentVal) .. suffix
-                pcall(callback, currentVal)
-            end
-
-            -- Init
-            setPct((default - min) / (max - min))
-
-            local dragging = false
-            trackBg.InputBegan:Connect(function(input)
-                if input.UserInputType == Enum.UserInputType.MouseButton1 then
-                    dragging = true
-                end
-            end)
-            UserInputService.InputEnded:Connect(function(input)
-                if input.UserInputType == Enum.UserInputType.MouseButton1 then
-                    dragging = false
-                end
-            end)
-            RunService.Heartbeat:Connect(function()
-                if dragging then
-                    local mouseX = UserInputService:GetMouseLocation().X
-                    local pct = (mouseX - trackBg.AbsolutePosition.X) / trackBg.AbsoluteSize.X
-                    setPct(pct)
-                end
-            end)
-
-            local sliderAPI = {}
-            function sliderAPI:Set(val)
-                setPct((val - min) / (max - min))
-            end
-            function sliderAPI:Get() return currentVal end
-            return sliderAPI, el
-        end
-
-        -- Dropdown
-        function tabAPI:AddDropdown(dropLabel, items, callback)
-            dropLabel = tostring(dropLabel or "Dropdown")
-            callback  = type(callback) == "function" and callback or function() end
-            items     = items or {}
-
-            local el = frame(scroller, {
-                Size             = UDim2.new(1, 0, 0, 32),
-                BackgroundColor3 = Theme.ElementBg,
-                ZIndex           = scroller.ZIndex + 1,
-                ClipsDescendants = false,
-            })
-            corner(el, 7)
-            stroke(el, Theme.ElementBorder, 1, 0.6)
-
-            label(el, {
-                Text      = string.upper(dropLabel),
-                Size      = UDim2.new(0.55, 0, 1, 0),
-                Position  = UDim2.new(0, 12, 0, 0),
-                TextColor3 = Theme.TextPrimary,
-                TextSize  = 12,
-                ZIndex    = el.ZIndex + 1,
-            })
-
-            local selectedLabel = label(el, {
-                Text      = items[1] and string.upper(items[1]) or "SELECT...",
-                Size      = UDim2.new(0.4, -30, 1, 0),
-                Position  = UDim2.new(0.55, 0, 0, 0),
-                TextColor3 = Theme.AccentLight,
-                TextSize  = 11,
-                TextXAlignment = Enum.TextXAlignment.Right,
-                ZIndex    = el.ZIndex + 1,
-            })
-
-            -- Arrow
-            local arrow = label(el, {
-                Text      = "⌄",
-                Size      = UDim2.fromOffset(20, 32),
-                Position  = UDim2.new(1, -22, 0, 0),
-                TextColor3 = Theme.AccentLight,
-                TextSize  = 14,
-                TextXAlignment = Enum.TextXAlignment.Center,
-                ZIndex    = el.ZIndex + 1,
-            })
-
-            -- Dropdown list
-            local dropList = frame(el, {
-                Name             = "DropList",
-                Size             = UDim2.new(1, 0, 0, 0),
-                Position         = UDim2.new(0, 0, 1, 4),
-                BackgroundColor3 = Theme.ContentAlt,
-                ZIndex           = el.ZIndex + 10,
-                ClipsDescendants = true,
-                Visible          = false,
-            })
-            corner(dropList, 7)
-            stroke(dropList, Theme.ElementBorder, 1, 0.4)
-
-            local dropLayout = Instance.new("UIListLayout")
-            dropLayout.SortOrder = Enum.SortOrder.LayoutOrder
-            dropLayout.Parent    = dropList
-
-            local dropPad = Instance.new("UIPadding")
-            dropPad.PaddingTop    = UDim.new(0, 4)
-            dropPad.PaddingBottom = UDim.new(0, 4)
-            dropPad.Parent        = dropList
-
-            local isOpen = false
-            local selectedValue = items[1]
-
-            local function buildItems()
-                for _, c in ipairs(dropList:GetChildren()) do
-                    if c:IsA("TextButton") then c:Destroy() end
-                end
-                for _, item in ipairs(items) do
-                    local itemBtn = button(dropList, {
-                        Text             = "  " .. string.upper(tostring(item)),
-                        Size             = UDim2.new(1, 0, 0, 28),
-                        BackgroundColor3 = Theme.ContentAlt,
-                        BackgroundTransparency = 0,
-                        TextColor3       = item == selectedValue and Theme.AccentLight or Theme.TextSecondary,
-                        TextSize         = 11,
-                        ZIndex           = dropList.ZIndex + 1,
-                    })
-                    itemBtn.MouseEnter:Connect(function()
-                        tween(itemBtn, {BackgroundColor3 = Theme.ElementHover, TextColor3 = Theme.TextPrimary}, 0.08)
-                    end)
-                    itemBtn.MouseLeave:Connect(function()
-                        tween(itemBtn, {BackgroundColor3 = Theme.ContentAlt, TextColor3 = item == selectedValue and Theme.AccentLight or Theme.TextSecondary}, 0.08)
-                    end)
-                    itemBtn.MouseButton1Click:Connect(function()
-                        selectedValue = item
-                        selectedLabel.Text = string.upper(tostring(item))
-                        isOpen = false
-                        tween(dropList, {Size = UDim2.new(1, 0, 0, 0)}, 0.15)
-                        task.delay(0.15, function() dropList.Visible = false end)
-                        tween(arrow, {Rotation = 0}, 0.15)
-                        buildItems()
-                        pcall(callback, item)
-                    end)
-                end
-            end
-            buildItems()
-
-            local headerBtn = button(el, {
-                Size  = UDim2.new(1, 0, 1, 0),
-                ZIndex = el.ZIndex + 2,
-                Text  = "",
-            })
-            headerBtn.MouseEnter:Connect(function()
-                tween(el, {BackgroundColor3 = Theme.ElementHover}, 0.1)
-            end)
-            headerBtn.MouseLeave:Connect(function()
-                tween(el, {BackgroundColor3 = Theme.ElementBg}, 0.1)
-            end)
-            headerBtn.MouseButton1Click:Connect(function()
-                isOpen = not isOpen
-                if isOpen then
-                    dropList.Visible = true
-                    local itemCount = #items
-                    local listH = math.min(itemCount * 28 + 8, 150)
-                    tween(dropList, {Size = UDim2.new(1, 0, 0, listH)}, 0.15)
-                    tween(arrow, {Rotation = 180}, 0.15)
-                else
-                    tween(dropList, {Size = UDim2.new(1, 0, 0, 0)}, 0.15)
-                    task.delay(0.15, function() dropList.Visible = false end)
-                    tween(arrow, {Rotation = 0}, 0.15)
-                end
-            end)
-
-            local ddAPI = {}
-            function ddAPI:Set(val)
-                selectedValue = val
-                selectedLabel.Text = string.upper(tostring(val))
-                buildItems()
-            end
-            function ddAPI:Get() return selectedValue end
-            function ddAPI:SetItems(newItems)
-                items = newItems
-                buildItems()
-            end
-            return ddAPI, el
-        end
-
-        -- TextBox / Input
-        function tabAPI:AddInput(inputLabel, placeholder, callback)
-            inputLabel  = tostring(inputLabel or "Input")
-            placeholder = tostring(placeholder or "Type here...")
-            callback    = type(callback) == "function" and callback or function() end
-
-            local el = frame(scroller, {
-                Size             = UDim2.new(1, 0, 0, 32),
-                BackgroundColor3 = Theme.ElementBg,
-                ZIndex           = scroller.ZIndex + 1,
-            })
-            corner(el, 7)
-            stroke(el, Theme.ElementBorder, 1, 0.6)
-
-            label(el, {
-                Text      = string.upper(inputLabel),
-                Size      = UDim2.new(0.4, 0, 1, 0),
-                Position  = UDim2.new(0, 12, 0, 0),
-                TextColor3 = Theme.TextPrimary,
-                TextSize  = 12,
-                ZIndex    = el.ZIndex + 1,
-            })
-
-            local tb = Instance.new("TextBox")
-            tb.Name                  = "Input"
-            tb.Parent                = el
-            tb.Size                  = UDim2.new(0.55, -12, 0, 22)
-            tb.Position              = UDim2.new(0.43, 0, 0.5, -11)
-            tb.BackgroundColor3      = Theme.ContentAlt
-            tb.BorderSizePixel       = 0
-            tb.Font                  = Enum.Font.GothamBold
-            tb.TextSize              = 11
-            tb.TextColor3            = Theme.TextPrimary
-            tb.PlaceholderColor3     = Theme.TextMuted
-            tb.PlaceholderText       = placeholder
-            tb.Text                  = ""
-            tb.ClearTextOnFocus      = false
-            tb.ZIndex                = el.ZIndex + 2
-            corner(tb, 5)
-            stroke(tb, Theme.ElementBorder, 1, 0.4)
-
-            local tbPad = Instance.new("UIPadding")
-            tbPad.PaddingLeft  = UDim.new(0, 6)
-            tbPad.PaddingRight = UDim.new(0, 6)
-            tbPad.Parent       = tb
-
-            tb.Focused:Connect(function()
-                tween(tb, {BackgroundColor3 = Theme.ElementHover}, 0.1)
-            end)
-            tb.FocusLost:Connect(function(enter)
-                tween(tb, {BackgroundColor3 = Theme.ContentAlt}, 0.1)
-                if enter then pcall(callback, tb.Text) end
-            end)
-
-            return tb, el
-        end
-
-        -- Keybind
-        function tabAPI:AddKeybind(kbLabel, default, callback)
-            kbLabel  = tostring(kbLabel or "Keybind")
-            callback = type(callback) == "function" and callback or function() end
-            local currentKey = default or Enum.KeyCode.Unknown
-
-            local el = frame(scroller, {
-                Size             = UDim2.new(1, 0, 0, 32),
-                BackgroundColor3 = Theme.ElementBg,
-                ZIndex           = scroller.ZIndex + 1,
-            })
-            corner(el, 7)
-            stroke(el, Theme.ElementBorder, 1, 0.6)
-
-            label(el, {
-                Text      = string.upper(kbLabel),
-                Size      = UDim2.new(0.6, 0, 1, 0),
-                Position  = UDim2.new(0, 12, 0, 0),
-                TextColor3 = Theme.TextPrimary,
-                TextSize  = 12,
-                ZIndex    = el.ZIndex + 1,
-            })
-
-            local keyName = currentKey ~= Enum.KeyCode.Unknown and currentKey.Name or "NONE"
-            local keyBtn = button(el, {
-                Text             = keyName,
-                Size             = UDim2.new(0, 70, 0, 22),
-                Position         = UDim2.new(1, -82, 0.5, -11),
-                BackgroundColor3 = Theme.ContentAlt,
-                BackgroundTransparency = 0,
-                TextColor3       = Theme.AccentLight,
-                TextSize         = 10,
-                ZIndex           = el.ZIndex + 2,
-            })
-            corner(keyBtn, 5)
-            stroke(keyBtn, Theme.ElementBorder, 1, 0.4)
-
-            local listening = false
-            keyBtn.MouseButton1Click:Connect(function()
-                if listening then return end
-                listening = true
-                keyBtn.Text = "..."
-                tween(keyBtn, {BackgroundColor3 = Theme.ElementHover}, 0.1)
-                local conn
-                conn = UserInputService.InputBegan:Connect(function(input)
-                    if input.UserInputType == Enum.UserInputType.Keyboard then
-                        currentKey = input.KeyCode
-                        keyBtn.Text = input.KeyCode.Name
-                        tween(keyBtn, {BackgroundColor3 = Theme.ContentAlt}, 0.1)
-                        listening = false
-                        conn:Disconnect()
-                    end
-                end)
-            end)
-
-            UserInputService.InputBegan:Connect(function(input, processed)
-                if not processed and input.KeyCode == currentKey and not listening then
-                    pcall(callback, currentKey)
-                end
-            end)
-
-            local kbAPI = {}
-            function kbAPI:Set(key)
-                currentKey = key
-                keyBtn.Text = key.Name
-            end
-            return kbAPI, el
-        end
-
-        -- Color Picker (simple)
-        function tabAPI:AddColorPicker(cpLabel, default, callback)
-            cpLabel  = tostring(cpLabel or "Color")
-            callback = type(callback) == "function" and callback or function() end
-            local currentColor = default or Color3.fromRGB(138, 43, 226)
-
-            local el = frame(scroller, {
-                Size             = UDim2.new(1, 0, 0, 32),
-                BackgroundColor3 = Theme.ElementBg,
-                ZIndex           = scroller.ZIndex + 1,
-            })
-            corner(el, 7)
-            stroke(el, Theme.ElementBorder, 1, 0.6)
-
-            label(el, {
-                Text      = string.upper(cpLabel),
-                Size      = UDim2.new(0.65, 0, 1, 0),
-                Position  = UDim2.new(0, 12, 0, 0),
-                TextColor3 = Theme.TextPrimary,
-                TextSize  = 12,
-                ZIndex    = el.ZIndex + 1,
-            })
-
-            local preview = frame(el, {
-                Size             = UDim2.fromOffset(22, 22),
-                Position         = UDim2.new(1, -34, 0.5, -11),
-                BackgroundColor3 = currentColor,
-                ZIndex           = el.ZIndex + 2,
-            })
-            corner(preview, 5)
-            stroke(preview, Theme.ElementBorder, 1, 0.3)
-
-            local cpAPI = {}
-            function cpAPI:Set(color)
-                currentColor = color
-                preview.BackgroundColor3 = color
-                pcall(callback, color)
-            end
-            function cpAPI:Get() return currentColor end
-            return cpAPI, el
-        end
-
-        -- Separator
-        function tabAPI:AddSeparator()
-            local sep = frame(scroller, {
-                Size             = UDim2.new(1, 0, 0, 8),
-                BackgroundTransparency = 1,
-                ZIndex           = scroller.ZIndex + 1,
-            })
-            frame(sep, {
-                Size             = UDim2.new(1, 0, 0, 1),
-                Position         = UDim2.new(0, 0, 0.5, 0),
-                BackgroundColor3 = Theme.SidebarBorder,
-                ZIndex           = sep.ZIndex + 1,
-            })
-            return sep
-        end
-
-        function tabAPI:Show()
-            for _, t in ipairs(tabPages) do
-                t.page.Visible = false
-                tween(t.btn, {BackgroundTransparency = 1}, 0.12)
-                tween(t.lbl, {TextColor3 = Theme.TextMuted}, 0.12)
-                tween(t.bar, {BackgroundTransparency = 1}, 0.12)
-            end
-            page.Visible = true
-            tween(navBtn, {BackgroundTransparency = 0.5}, 0.12)
-            navBtn.BackgroundColor3 = Theme.ElementHover
-            tween(navLabel, {TextColor3 = Theme.AccentLight}, 0.12)
-            tween(activeBar, {BackgroundTransparency = 0}, 0.12)
-            activeNav = navBtn
-        end
-
+        navBtn.MouseEnter:Connect(function() if activeNav~=navBtn then navBtn.BackgroundColor3=T.ElHover; tw(navBtn,{BackgroundTransparency=0.8},0.1) end end)
+        navBtn.MouseLeave:Connect(function() if activeNav~=navBtn then tw(navBtn,{BackgroundTransparency=1},0.1) end end)
+        if #tabPages==1 then selectThis() end
+
+        -- use module-level buildAPI
+        local tabAPI = buildAPI(scroller, ca.ZIndex+2)
+        function tabAPI:Show() selectThis() end
         return tabAPI, page
     end
 
-    -- Notification method
-    function windowAPI:Notify(title, message, duration)
-        duration = duration or 3
-        local notif = frame(Root, {
-            Size             = UDim2.fromOffset(260, 56),
-            Position         = UDim2.new(1, -276, 1, -80),
-            BackgroundColor3 = Theme.ContentAlt,
-            ZIndex           = 999,
-        })
-        corner(notif, 8)
-        stroke(notif, Theme.AccentLight, 1.5, 0.3)
-
-        -- Accent bar
-        frame(notif, {
-            Size             = UDim2.fromOffset(3, 56),
-            BackgroundColor3 = Theme.AccentLight,
-            ZIndex           = notif.ZIndex + 1,
-        })
-        corner(frame(notif, {Size=UDim2.fromOffset(3,56), BackgroundColor3=Theme.Content, ZIndex=notif.ZIndex}), 0)
-
-        label(notif, {
-            Text      = string.upper(tostring(title)),
-            Size      = UDim2.new(1, -20, 0, 20),
-            Position  = UDim2.new(0, 14, 0, 8),
-            TextColor3 = Theme.AccentLight,
-            TextSize  = 11,
-            ZIndex    = notif.ZIndex + 2,
-        })
-        label(notif, {
-            Text      = tostring(message),
-            Size      = UDim2.new(1, -20, 0, 18),
-            Position  = UDim2.new(0, 14, 0, 26),
-            TextColor3 = Theme.TextSecondary,
-            TextSize  = 10,
-            ZIndex    = notif.ZIndex + 2,
-        })
-
-        -- Slide in
-        notif.Position = UDim2.new(1, 10, 1, -80)
-        tween(notif, {Position = UDim2.new(1, -276, 1, -80)}, 0.3, Enum.EasingStyle.Back, Enum.EasingDirection.Out)
-        task.delay(duration, function()
-            tween(notif, {Position = UDim2.new(1, 10, 1, -80)}, 0.25)
-            task.delay(0.25, function()
-                notif:Destroy()
-            end)
-        end)
+    function windowAPI:Notify(t, msg, dur)
+        dur = dur or 3
+        local n = mkFrame(Root, {Size=UDim2.fromOffset(248,52), Position=UDim2.new(1,10,1,-74), BackgroundColor3=T.ContentAlt, ZIndex=9999})
+        mkCorner(n,8); mkStroke(n,T.AccentLight,1.5,0.3)
+        mkFrame(n, {Size=UDim2.fromOffset(3,52), BackgroundColor3=T.AccentLight, ZIndex=n.ZIndex+1})
+        mkLabel(n, {Text=string.upper(tostring(t)), Size=UDim2.new(1,-16,0,18), Position=UDim2.new(0,10,0,6), TextColor3=T.AccentLight, TextSize=10, ZIndex=n.ZIndex+2})
+        mkLabel(n, {Text=tostring(msg), Size=UDim2.new(1,-16,0,16), Position=UDim2.new(0,10,0,24), TextColor3=T.TextSec, TextSize=9, TextWrapped=true, ZIndex=n.ZIndex+2})
+        tw(n, {Position=UDim2.new(1,-264,1,-74)}, 0.3, Enum.EasingStyle.Back, Enum.EasingDirection.Out)
+        task.delay(dur, function() tw(n,{Position=UDim2.new(1,10,1,-74)},0.25); task.delay(0.25,function() n:Destroy() end) end)
     end
 
     return windowAPI, win
 end
 
---// MINIMIZER
 function Library:CreateMinimizer(cfg)
     cfg = cfg or {}
     if self._mini and self._mini.Parent then return self._mini end
-
-    local miniGui = Instance.new("ScreenGui")
-    miniGui.Name           = "VTMiniGui"
-    miniGui.DisplayOrder   = 1001
-    miniGui.ResetOnSpawn   = false
-    miniGui.IgnoreGuiInset = true
-    miniGui.Parent         = game:GetService("CoreGui")
-
-    local holder = frame(miniGui, {
-        Size     = cfg.Size or UDim2.fromOffset(38, 38),
-        Position = cfg.Position or UDim2.fromOffset(20, 20),
-        BackgroundTransparency = 1,
-        ZIndex   = 100,
-    })
-
-    local btn = button(holder, {
-        Size             = UDim2.new(1, 0, 1, 0),
-        BackgroundColor3 = Theme.Sidebar,
-        BackgroundTransparency = 0,
-        ZIndex           = 101,
-        Text             = "⚡",
-        TextSize         = 16,
-        TextColor3       = Theme.AccentLight,
-        TextXAlignment   = Enum.TextXAlignment.Center,
-    })
-    corner(btn, 8)
-    local miniStroke = stroke(btn, Theme.AccentLight, 1.5, 0.3)
-    animateBorder(miniStroke)
-
+    local mg = Instance.new("ScreenGui"); mg.Name="VTMiniGui"; mg.DisplayOrder=1001; mg.ResetOnSpawn=false; mg.IgnoreGuiInset=true; mg.Parent=game:GetService("CoreGui")
+    local holder = mkFrame(mg, {Size=cfg.Size or UDim2.fromOffset(38,38), Position=cfg.Position or UDim2.fromOffset(20,20), BackgroundTransparency=1, ZIndex=100})
+    local icon = cfg.Icon or ""; local isId = type(icon)=="string" and icon:match("^rbxassetid://")
+    local btn = mkBtn(holder, {Size=UDim2.new(1,0,1,0), BackgroundColor3=T.Sidebar, BackgroundTransparency=0, ZIndex=101, Text=isId and "" or "⚡", TextSize=16, TextColor3=T.AccentLight, TextXAlignment=Enum.TextXAlignment.Center})
+    mkCorner(btn, cfg.Corner or 8); animBorder(mkStroke(btn,T.AccentLight,1.5,0.3))
+    if isId then mkImg(btn, {Size=UDim2.new(0.68,0,0.68,0), Position=UDim2.new(0.16,0,0.16,0), Image=icon, ImageColor3=T.AccentLight, ZIndex=btn.ZIndex+1}) end
     btn.MouseButton1Click:Connect(function()
         Root.Enabled = not Root.Enabled
-        tween(btn, {Size = UDim2.fromOffset(30, 30)}, 0.08)
-        task.delay(0.08, function()
-            tween(btn, {Size = UDim2.new(1,0,1,0)}, 0.12, Enum.EasingStyle.Back)
-        end)
+        tw(holder,{Size=UDim2.fromOffset(30,30)},0.08)
+        task.delay(0.08, function() tw(holder,{Size=cfg.Size or UDim2.fromOffset(38,38)},0.12,Enum.EasingStyle.Back) end)
     end)
-
-    -- Drag
-    if cfg.Draggable ~= false then
-        local dragging, dragStart, startPos = false, nil, nil
-        btn.InputBegan:Connect(function(input)
-            if input.UserInputType == Enum.UserInputType.MouseButton1 then
-                dragging = true
-                dragStart = UserInputService:GetMouseLocation()
-                startPos  = holder.Position
-            end
-        end)
-        btn.InputEnded:Connect(function(input)
-            if input.UserInputType == Enum.UserInputType.MouseButton1 then
-                dragging = false
-            end
-        end)
+    if cfg.Draggable~=false then
+        local drg,ds,sp=false,nil,nil
+        btn.InputBegan:Connect(function(i) if i.UserInputType==Enum.UserInputType.MouseButton1 then drg=true; ds=UserInputService:GetMouseLocation(); sp=holder.Position end end)
+        btn.InputEnded:Connect(function(i) if i.UserInputType==Enum.UserInputType.MouseButton1 then drg=false end end)
         RunService.Heartbeat:Connect(function()
-            if dragging and dragStart then
-                local delta = UserInputService:GetMouseLocation() - dragStart
-                if delta.Magnitude > 4 then
-                    holder.Position = UDim2.fromOffset(startPos.X.Offset + delta.X, startPos.Y.Offset + delta.Y)
-                end
-            end
+            if drg and ds then local d=UserInputService:GetMouseLocation()-ds; holder.Position=UDim2.fromOffset(sp.X.Offset+d.X,sp.Y.Offset+d.Y) end
         end)
     end
-
-    self._mini = holder
-    return holder
+    self._mini = holder; return holder
 end
 
 return Library
